@@ -1,12 +1,13 @@
 A Perl script to indent a lousily indented or indentless SAS script.
+===================================================================
 
-Example: 
+# Example: 
 indsas xxx.sas 
 or 
 indsas xxx.sas > new_xxx.sas 
 
 
-NOTE: 
+# NOTE: 
 1) indsas assumes the following SAS scripting(indenting) styles for input and merge statements: 
 
 ==INPUT=== 
@@ -39,10 +40,6 @@ run;
 5) indsas was only tested in the unix/linux environment. 
 
 
-
-
+# INSTALL DETAILS
+Download and move indsas to whatever folder you like. Add that folder to your $PATH variable if you haven't done that yet.
  
-install details
-download and move indsas to whatever folder you like. Add that folder to your $PATH variable if you haven't done that yet.
- 
-
