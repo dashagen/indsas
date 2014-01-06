@@ -35,9 +35,7 @@ run;
 
 3) This script is still very primitive and does not account for all other eccentric scripting styles. 
 
-4) indsas does not handle "cards" or "datalines" correctly. Please manually adjust those lines. 
-
-5) indsas was only tested in the unix/linux environment. 
+4) indsas was only tested in the unix/linux environment. 
 
 
 # INSTALL DETAILS
