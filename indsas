@@ -20,7 +20,7 @@ for (<>)
 {
     chomp $_;
 
-    # replace tag with 4 spaces
+    # replace tab with 4 spaces
     $_=~s/\t/    /g;
 
     #keep original line;
@@ -32,7 +32,7 @@ for (<>)
     #pull current status;
     my $curr_status = $status[-1];
 
-    #check if indent is ending
+    #check if indented block is ending
     if (  ($_=~/^run;/i && not($_=~/proc\s+/i) && not($_=~/data\s+/i)) ||
             $_=~/^\%mend.*;/i || 
             ($_=~/^%*end;/i) ||
@@ -55,16 +55,19 @@ for (<>)
     }
     else {
 
-        #the indents.
+        #lazy handling of sql.
         if ($curr_status eq "sql" && not($_=~/^quit;/i)) {
             if ($sql_line == 1) {
                 $sql_first_pos = firstpos($ori_line);
             }
+            
             my $extra = firstpos($ori_line) - $sql_first_pos;
+            
             $extra = int($extra / 4);
             $indent = "    "x($numtab + $extra);
             $sql_line +=1;
         } 
+        # non sql handling
         else {
             $indent = "    "x$numtab;
         }
@@ -75,7 +78,8 @@ for (<>)
     my $next_status = "nodo";
 
     if ( $_=~/^proc\s+/i && not($_=~/\Wrun;/i) && not($_=~/\Wquit;/i) && not($_=~/\s+sql\s*;/i))
-    { $next_status = "proc";
+    { 
+        $next_status = "proc";
     }      
     elsif ($_=~/^data\s+/i && not($_=~/run;/i))
     {
@@ -99,16 +103,20 @@ for (<>)
         $next_status = "else"; 
     }
     elsif ( ($_=~/^(in)*put(\s|$)/i || $_=~/^keep(\s|$)/i) && not($_=~/;/))
-    { $next_status = "input_put";
+    { 
+        $next_status = "input_put";
     }
     elsif ($_=~/^%*do\s+/i )
-    { $next_status = "do";
+    { 
+        $next_status = "do";
     }
     elsif ($_=~/merge(\s|$)/i && not($_=~/;/) && $status[$#status] eq "data")
-    { $next_status = "merge";
+    { 
+        $next_status = "merge";
     }
     elsif ($_=~/^\%let\s+.*=/i && not($_=~/;/) )
-    {   $next_status = "macrovarlist";
+    {   
+        $next_status = "macrovarlist";
     }
 
     #push next indent status to queue and adjust numtab
