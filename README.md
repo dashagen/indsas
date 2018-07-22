@@ -21,10 +21,10 @@
 
     /* MERGE */
     data new; 
-           merge 
-                dat1(in=a) 
-                dat2(in=b) 
-           ; 
+        merge 
+            dat1(in=a) 
+            dat2(in=b) 
+        ; 
     run; 
     ```
     
