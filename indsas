@@ -3,116 +3,126 @@
 #####################################################
 ### Perl Script for SAS style Indentation         ###
 ###                                               ###
-### Usage:                                        ###
-### 1) indsas your_sas_script.sas                 ###
-###                                               ###
-###    OR                                         ###
-###                                               ###
-### 2) Put the following line in .vimrc and you   ###
-###    can use gg=G to indent code in VIM.        ###
-###    set ep=your_path_to_indsas/indsas          ###
-###                                               ###
 ### Created by David Yeung (dyeung008@gmail.com)  ###
 ###                                               ###
-### Updates:                                      ###
-###  07/03/2011                                   ###
-###  05/20/2012 : can work on file, doesn't need  ###
-###               pipe.                           ###
-###  12/01/2013 : can handle datalines.           ###
 #####################################################
 
 $0=~/.*\/(.*)/;
 
 my $numtab = 0;
 my @status = ("root");
+my $sql_first_pos;
+my $indent;
+my $sql_line = 0;
 
 
 for (<>)
 {
-        chomp $_;
+ chomp $_;
+    # replace tag with 4 spaces
+ $_=~s/\t/    /g;
+    #keep original line;
+    my $ori_line = $_;
 
-        #strip preceding spaces;
-        $_=~s/^\s+//g;
-        $_=~s/^\t+//g;
+ #strip preceding spaces;
+ $_=~s/^\s+//g;
 
+ #pull current status;
+ my $curr_status = $status[-1];
 
-        #pull current status;
-        my $curr_status = $status[-1];
-
-
-        #check if indent is ending
-        if (  ($_=~/^run;/i && not($_=~/proc\s+/i) && not($_=~/data\s+/i)) ||
-                  $_=~/^\%mend.*;/i ||
-                  ($_=~/^%*end;/i) ||
-                  ($_=~/^quit;/i  ) ||
-                  ($_=~/;/ && $curr_status eq "input_put" ) ||
-                  ($_=~/;/ && $curr_status eq "merge")
-           )
-        {
-                if ($curr_status ne "root")
-                {
-                        $numtab+=-1;
-                        pop @status;
-                }
-        }
-
-
-        #the indents.
-        my $header = "    "x$numtab;
-
-
-        #print current line with indents except for datalines.
+ #check if indent is ending
+  if (  ($_=~/^run;/i && not($_=~/proc\s+/i) && not($_=~/data\s+/i)) ||
+    $_=~/^\%mend.*;/i || 
+    ($_=~/^%*end;/i) ||
+    ($_=~/^quit;/i  ) ||
+    ($_=~/;/ && $curr_status eq "input_put" ) ||
+    ($_=~/;/ && $curr_status eq "macrovarlist" ) ||
+    ($_=~/;/ && $curr_status eq "merge")  
+    )
+ { 
+  if ($curr_status ne "root")
+  {
+   $numtab+=-1;
+   pop @status;
+  }
+ }
+ 
+ #Print current line with indents except for datalines.
+    #print "=====> status is $curr_status, numtab: $numtab\n";
     if ($_=~/datalines;/) {
         print $_."\n";
     }
-    else {
-        print $header.$_."\n";
+    else  {
+        #the indents.
+        if ($curr_status eq "sql" && not($_=~/^quit;/i)) {
+            if ($sql_line == 1) {
+                $sql_first_pos = firstpos($ori_line);
+            }
+            my $extra = firstpos($ori_line) - $sql_first_pos;
+            $extra = int($extra / 4);
+            $indent = "    "x($numtab + $extra);
+            $sql_line +=1;
+        } 
+        else {
+            $indent = "    "x$numtab;
+        }
+        print $indent.$_."\n";
     }
 
+ #Get indent status for next;
+ my $next_status = "nodo";
+  if ( $_=~/^proc\s+/i && not($_=~/\Wrun;/i) && not($_=~/\Wquit;/i) && not($_=~/\s+sql\s*;/i))
+ { $next_status = "proc";
+ }      
+ elsif ($_=~/^data\s+/i && not($_=~/run;/i))
+ {
+  $next_status = "data";
+ }
+ elsif ($_=~/^\%macro\s+/i && not($_=~/\%mend;/i))
+ {
+  $next_status = "macro";
+ }
+ elsif ($_=~/^proc sql/i && not($_=~/quit;/i))
+ {
+        $sql_line = 1;
+  $next_status = "sql";
+ }
+ elsif ($_=~/%*then %*do;/i)
+ {
+  $next_status = "if";
+ }
+ elsif ($_=~/^%*else %*do/i )
+ {
+  $next_status = "else"; 
+ }
+ elsif ( ($_=~/^(in)*put(\s|$)/i || $_=~/^keep(\s|$)/i) && not($_=~/;/))
+ { $next_status = "input_put";
+ }
+ elsif ($_=~/^%*do\s+/i )
+ { $next_status = "do";
+ }
+ elsif ($_=~/merge(\s|$)/i && not($_=~/;/) && $status[$#status] eq "data")
+ { $next_status = "merge";
+ }
+ elsif ($_=~/^\%let\s+.*=/i && not($_=~/;/) )
+    {   $next_status = "macrovarlist";
+    }
 
-        #get indent status for next;
-        my $next_status = "nodo";
+ #push next indent status to queue and adjust numtab
+ if ($next_status ne "nodo" ) 
+ {
+  push @status,$next_status;
+  $numtab+=1;
+ }
+}
 
-        if ( $_=~/^proc\s+/i && not($_=~/\Wrun;/i) && not($_=~/\s+sql\s*;/i))
-        {       $next_status = "proc";
-        }
-        elsif ($_=~/^data\s+/i && not($_=~/run;/i))
-        {
-                $next_status = "data";
-        }
-        elsif ($_=~/^\%macro\s+/i && not($_=~/\%mend;/))
-        {
-                $next_status = "macro";
-        }
-        elsif ($_=~/^proc sql/i && not($_=~/quit;/))
-        {
-                $next_status = "sql";
-        }
-        elsif ($_=~/%*then %*do;/i)
-        {
-                $next_status = "if";
-        }
-        elsif ($_=~/^%*else %*do/ )
-        {
-                $next_status = "else";
-        }
-        elsif ( ($_=~/^(in)*put(\s|$)/i || $_=~/^keep(\s|$)/i) && not($_=~/;/))
-        {       $next_status = "input_put";
-        }
-        elsif ($_=~/^%*do\s+/i )
-        {       $next_status = "do";
-        }
-        elsif ($_=~/merge(\s|$)/i && not($_=~/;/) && $status[$#status] eq "data")
-        {       $next_status = "merge";
-        }
-
-
-        #push next indent status to queue and adjust numtab
-        if ($next_status ne "nodo" )
-        {
-                push @status,$next_status;
-                $numtab+=1;
-        }
+# ========================================== #
+# Sub routine for getting pos of first char  #
+# ========================================== #
+sub firstpos {
+    my $line = shift;
+    $line=~/\S/;
+    return($-[0]);
 }
 
 
